@@ -1,0 +1,81 @@
+body {
+    font-family: 'Arial', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    background-color: #f0f0f0;
+    flex-direction: column;
+}
+
+.container {
+    text-align: center;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.game-over-message {
+    color: #d9534f; /* Red color for game over */
+    font-size: 2em;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+#minesweeper-grid {
+    display: grid;
+    border: 2px solid #333;
+    width: fit-content; /* Adjust to content size */
+    margin: 0 auto;
+}
+
+.cell {
+    width: 40px; /* Fixed cell size */
+    height: 40px;
+    border: 1px solid #bbb;
+    background-color: #ccc;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.2em;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none; /* Prevent text selection */
+    transition: background-color 0.1s ease;
+}
+
+.cell:hover:not(.revealed) {
+    background-color: #a0a0a0;
+}
+
+.cell.revealed {
+    background-color: #e0e0e0;
+    cursor: default;
+}
+
+.cell.mine {
+    background-color: #ff6666; /* Red for mines */
+    color: #fff;
+}
+
+/* Colors for numbers based on common Minesweeper themes */
+.mines-around-1 { color: blue; }
+.mines-around-2 { color: green; }
+.mines-around-3 { color: red; }
+.mines-around-4 { color: darkblue; }
+.mines-around-5 { color: darkred; }
+.mines-around-6 { color: teal; }
+.mines-around-7 { color: black; }
+.mines-around-8 { color: gray; }
