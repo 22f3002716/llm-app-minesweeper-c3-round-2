@@ -1,149 +1,156 @@
 const GRID_SIZE = 8;
 const NUM_MINES = 10;
-const board = [];
+const gridElement = document.getElementById('minesweeper-grid');
+const messageElement = document.querySelector('h1');
+const resetButton = document.getElementById('reset-button');
+
+let board = [];
 let gameOver = false;
-const minesweeperGrid = document.getElementById('minesweeper-grid');
-const gameStatusDisplay = document.getElementById('game-status');
 
-function createBoard() {
-    // Initialize board with empty cells
-    for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
-        board.push({
+// Initialize the game
+function initGame() {
+    gameOver = false;
+    messageElement.textContent = 'Minesweeper';
+    gridElement.innerHTML = ''; // Clear existing grid
+
+    // Create empty board
+    board = Array(GRID_SIZE).fill(null).map(() =>
+        Array(GRID_SIZE).fill(null).map(() => ({
             isMine: false,
-            isRevealed: false,
-            mineCountAround: 0,
-            element: null // Will store reference to the DOM cell element
-        });
-    }
+            revealed: false,
+            mineCount: 0,
+            element: null // Store reference to the DOM element
+        }))
+    );
 
-    // Place mines
     placeMines();
-
-    // Calculate mine counts for non-mine cells
-    calculateMineCounts();
-
-    // Render the board
-    renderBoard();
+    calculateAdjacentMines();
+    renderGrid();
 }
 
+// Place mines randomly
 function placeMines() {
     let minesPlaced = 0;
     while (minesPlaced < NUM_MINES) {
-        const randomIndex = Math.floor(Math.random() * (GRID_SIZE * GRID_SIZE));
-        if (!board[randomIndex].isMine) {
-            board[randomIndex].isMine = true;
+        const row = Math.floor(Math.random() * GRID_SIZE);
+        const col = Math.floor(Math.random() * GRID_SIZE);
+
+        if (!board[row][col].isMine) {
+            board[row][col].isMine = true;
             minesPlaced++;
         }
     }
 }
 
-function calculateMineCounts() {
-    for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
-        if (!board[i].isMine) {
+// Calculate adjacent mine counts for each cell
+function calculateAdjacentMines() {
+    for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
+            if (board[r][c].isMine) {
+                continue;
+            }
+
             let count = 0;
-            const neighbors = getNeighbors(i);
-            for (const neighborIndex of neighbors) {
-                if (board[neighborIndex].isMine) {
-                    count++;
+            // Check all 8 neighbors
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    if (dr === 0 && dc === 0) continue; // Skip self
+
+                    const nr = r + dr;
+                    const nc = c + dc;
+
+                    // Check bounds
+                    if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
+                        if (board[nr][nc].isMine) {
+                            count++;
+                        }
+                    }
                 }
             }
-            board[i].mineCountAround = count;
+            board[r][c].mineCount = count;
         }
     }
 }
 
-function getNeighbors(index) {
-    const neighbors = [];
-    const row = Math.floor(index / GRID_SIZE);
-    const col = index % GRID_SIZE;
+// Render the grid in the DOM
+function renderGrid() {
+    for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
+            const cellElement = document.createElement('div');
+            cellElement.classList.add('cell');
+            cellElement.dataset.row = r;
+            cellElement.dataset.col = c;
+            cellElement.addEventListener('click', () => handleClick(r, c));
+            
+            board[r][c].element = cellElement; // Store reference
 
-    for (let i = -1; i <= 1; i++) {
-        for (let j = -1; j <= 1; j++) {
-            if (i === 0 && j === 0) continue; // Skip the cell itself
+            gridElement.appendChild(cellElement);
+        }
+    }
+}
 
-            const newRow = row + i;
-            const newCol = col + j;
-            const newIndex = newRow * GRID_SIZE + newCol;
+// Handle cell clicks
+function handleClick(row, col) {
+    if (gameOver || board[row][col].revealed) {
+        return;
+    }
 
-            if (
-                newRow >= 0 && newRow < GRID_SIZE &&
-                newCol >= 0 && newCol < GRID_SIZE
-            ) {
-                neighbors.push(newIndex);
+    if (board[row][col].isMine) {
+        board[row][col].element.classList.add('mine');
+        gameOverState();
+    } else {
+        revealCell(row, col);
+    }
+}
+
+// Reveal a single cell
+function revealCell(row, col) {
+    // Boundary check, already revealed, or a mine
+    if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE || board[row][col].revealed || board[row][col].isMine) {
+        return;
+    }
+
+    const cell = board[row][col];
+    cell.revealed = true;
+    cell.element.classList.add('revealed');
+
+    if (cell.mineCount > 0) {
+        cell.element.textContent = cell.mineCount;
+        cell.element.classList.add(`count-${cell.mineCount}`);
+    } else {
+        // If it's an empty cell, recursively reveal neighbors
+        for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+                if (dr === 0 && dc === 0) continue; // Skip self
+                revealCell(row + dr, col + dc); // Recursive call
             }
         }
     }
-    return neighbors;
 }
 
-function renderBoard() {
-    minesweeperGrid.innerHTML = ''; // Clear existing grid
-    minesweeperGrid.style.gridTemplateColumns = `repeat(${GRID_SIZE}, 1fr)`;
-
-    board.forEach((cell, index) => {
-        const cellElement = document.createElement('div');
-        cellElement.classList.add('cell');
-        cellElement.dataset.index = index;
-        cellElement.addEventListener('click', () => handleClick(index));
-        
-        // Store reference to DOM element in board array
-        cell.element = cellElement;
-        minesweeperGrid.appendChild(cellElement);
-    });
+// Game Over state
+function gameOverState() {
+    gameOver = true;
+    messageElement.textContent = 'BOOM! Game Over.';
+    revealAllMines();
 }
 
-function handleClick(index) {
-    if (gameOver || board[index].isRevealed) {
-        return;
-    }
-
-    const cell = board[index];
-
-    if (cell.isMine) {
-        gameOver = true;
-        gameStatusDisplay.textContent = 'BOOM! Game Over.';
-        gameStatusDisplay.classList.add('game-over-message'); // Add class for styling
-        revealAllMines();
-        // Disable further clicks
-        minesweeperGrid.querySelectorAll('.cell').forEach(c => c.style.pointerEvents = 'none');
-    } else {
-        revealCell(index);
-    }
-}
-
-function revealCell(index) {
-    if (index < 0 || index >= GRID_SIZE * GRID_SIZE || board[index].isRevealed || board[index].isMine) {
-        return;
-    }
-
-    const cell = board[index];
-    cell.isRevealed = true;
-    cell.element.classList.add('revealed');
-
-    if (cell.mineCountAround > 0) {
-        cell.element.textContent = cell.mineCountAround;
-        cell.element.classList.add(`mines-around-${cell.mineCountAround}`); // For number coloring
-    } else {
-        // If no mines around, recursively reveal neighbors
-        const neighbors = getNeighbors(index);
-        for (const neighborIndex of neighbors) {
-            revealCell(neighborIndex);
-        }
-    }
-}
-
+// Reveal all mines on game over
 function revealAllMines() {
-    board.forEach(cell => {
-        if (cell.isMine) {
-            cell.element.classList.add('mine');
-            cell.element.textContent = '💣'; // Bomb emoji
-            cell.element.classList.add('revealed'); // Make sure it shows up
+    for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
+            const cell = board[r][c];
+            if (cell.isMine) {
+                cell.revealed = true; // Mark as revealed to prevent further clicks
+                cell.element.classList.add('mine');
+                cell.element.textContent = '💣'; // Bomb emoji
+            }
         }
-    });
+    }
 }
 
+// Event listener for reset button
+resetButton.addEventListener('click', initGame);
 
-// Initialize the game when the DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    createBoard();
-});
+// Initial game setup
+initGame();
